@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -105,13 +106,20 @@ func (shs *sHTTPService) stop(c *gin.Context) {
 	c.JSON(200, gin.H{"data": nil, "error": ""})
 }
 
+type HTMLRoute struct {
+	URLPath  string
+	HTMLFile string
+}
+
 type SchedulerHTTPService struct {
 	Scheduler *agscheduler.Scheduler
 
 	// Default: `127.0.0.1:36370`
-	Address     string
-	StaticPaths map[string]string     // New field for static paths
-	ExtraRoutes []func(r *gin.Engine) // New field for additional routes
+	Address      string
+	StaticPaths  map[string]string     // New field for static paths
+	ExtraRoutes  []func(r *gin.Engine) // New field for additional routes
+	HTMLRoutes   []HTMLRoute           // New field for HTML routes
+	HTMLGlobPath string                // New field for HTML glob path
 }
 
 func (s *SchedulerHTTPService) registerRoutes(r *gin.Engine, shs *sHTTPService) {
@@ -141,6 +149,15 @@ func (s *SchedulerHTTPService) AddRoute(routeFunc func(r *gin.Engine)) {
 	s.ExtraRoutes = append(s.ExtraRoutes, routeFunc)
 }
 
+// New method to add HTML resource routes
+func (s *SchedulerHTTPService) AddHTMLRoute(urlPath, htmlFile string) {
+	s.HTMLRoutes = append(s.HTMLRoutes, HTMLRoute{URLPath: urlPath, HTMLFile: htmlFile})
+}
+
+func (s *SchedulerHTTPService) AddHTMLGlobPath(globPath string) {
+	s.HTMLGlobPath = globPath
+}
+
 func (s *SchedulerHTTPService) Start() error {
 	if s.Address == "" {
 		s.Address = "127.0.0.1:36370"
@@ -153,6 +170,23 @@ func (s *SchedulerHTTPService) Start() error {
 	s.registerRoutes(r, &sHTTPService{scheduler: s.Scheduler})
 
 	slog.Info(fmt.Sprintf("Scheduler HTTP Service listening at: %s", s.Address))
+	if condition := s.HTMLGlobPath != ""; condition {
+		r.LoadHTMLGlob(s.HTMLGlobPath)
+	}
+	// Setting up static paths
+	for urlPath, localPath := range s.StaticPaths {
+		r.Static(urlPath, localPath)
+	}
+
+	// Adding extra routes
+	for _, routeFunc := range s.ExtraRoutes {
+		routeFunc(r)
+	}
+
+	// Serve HTML files
+	for _, route := range s.HTMLRoutes {
+		s.serveHTML(r, route.URLPath, route.HTMLFile)
+	}
 
 	go func() {
 		if err := r.Run(s.Address); err != nil {
@@ -161,4 +195,11 @@ func (s *SchedulerHTTPService) Start() error {
 	}()
 
 	return nil
+}
+
+// Helper method to serve an HTML file
+func (s *SchedulerHTTPService) serveHTML(r *gin.Engine, urlPath, htmlFile string) {
+	r.GET(urlPath, func(c *gin.Context) {
+		c.HTML(http.StatusOK, htmlFile, nil)
+	})
 }

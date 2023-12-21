@@ -1,7 +1,9 @@
 package agscheduler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -527,21 +529,27 @@ func (s *Scheduler) httpCallback(j Job, errMsg string) {
 		return // 如果没有设置HTTP回调配置，则返回
 	}
 
-	// 创建请求数据
-	data := url.Values{}
-	for key, value := range s.HTTPCallbackConfig.Params {
-		data.Set(key, value)
-	}
-
-	// 创建请求
 	var req *http.Request
 	var err error
-	if s.HTTPCallbackConfig.Method == "POST" {
-		req, err = http.NewRequest("POST", s.HTTPCallbackConfig.URL, strings.NewReader(data.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// 根据配置选择发送JSON或表单数据
+	if s.HTTPCallbackConfig.Method == "POST" && s.HTTPCallbackConfig.Headers["Content-Type"] == "application/json" {
+		// 发送JSON数据
+		jsonBody, err := json.Marshal(s.HTTPCallbackConfig.Params)
+		if err != nil {
+			log.Println("Failed to marshal JSON:", err)
+			return
+		}
+		req, err = http.NewRequest("POST", s.HTTPCallbackConfig.URL, bytes.NewBuffer(jsonBody))
+		req.Header.Add("Content-Type", "application/json")
 	} else {
-		req, err = http.NewRequest("GET", s.HTTPCallbackConfig.URL, nil)
-		req.URL.RawQuery = data.Encode()
+		// 发送表单数据
+		data := url.Values{}
+		for key, value := range s.HTTPCallbackConfig.Params {
+			data.Set(key, value)
+		}
+		req, err = http.NewRequest(s.HTTPCallbackConfig.Method, s.HTTPCallbackConfig.URL, strings.NewReader(data.Encode()))
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
 
 	// 添加自定义头

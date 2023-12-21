@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 	"time"
@@ -24,6 +25,17 @@ type result struct {
 
 func dryRunHTTP(ctx context.Context, j agscheduler.Job) {}
 
+func errorRunHTTP(ctx context.Context, j agscheduler.Job) {
+	// error
+	slog.Info("error")
+
+}
+
+func panicRunHTTP(ctx context.Context, j agscheduler.Job) {
+	slog.Info("error")
+	panic("panic")
+}
+
 func testAGSchedulerHTTP(t *testing.T, baseUrl string) {
 	client := &http.Client{}
 
@@ -37,6 +49,7 @@ func testAGSchedulerHTTP(t *testing.T, baseUrl string) {
 		"func_name": "github.com/kurtloong/agscheduler/services.dryRunHTTP",
 		"args":      map[string]any{"arg1": "1", "arg2": "2", "arg3": "3"},
 	}
+
 	bJ, err := json.Marshal(mJ)
 	assert.NoError(t, err)
 	resp, err := http.Post(baseUrl+"/scheduler/job", CONTENT_TYPE, bytes.NewReader(bJ))
@@ -143,16 +156,23 @@ func testAGSchedulerHTTP(t *testing.T, baseUrl string) {
 
 func TestHTTPService(t *testing.T) {
 	agscheduler.RegisterFuncs(dryRunHTTP)
+	agscheduler.RegisterFuncs(errorRunHTTP)
+	agscheduler.RegisterFuncs(panicRunHTTP)
 
 	store := &stores.MemoryStore{}
 
 	scheduler := &agscheduler.Scheduler{}
 	scheduler.SetStore(store)
+	scheduler.HTTPCallbackConfig = &agscheduler.HTTPCallbackConfig{
+		URL:    "http://baidu.com",
+		Method: http.MethodGet,
+	}
 
 	shservice := SchedulerHTTPService{
 		Scheduler: scheduler,
 		// Address:   "127.0.0.1:36370",
 	}
+
 	shservice.Start()
 
 	time.Sleep(time.Second)
