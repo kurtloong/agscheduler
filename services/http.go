@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-
 	"github.com/kurtloong/agscheduler"
 )
 
@@ -110,7 +109,9 @@ type SchedulerHTTPService struct {
 	Scheduler *agscheduler.Scheduler
 
 	// Default: `127.0.0.1:36370`
-	Address string
+	Address     string
+	StaticPaths map[string]string     // New field for static paths
+	ExtraRoutes []func(r *gin.Engine) // New field for additional routes
 }
 
 func (s *SchedulerHTTPService) registerRoutes(r *gin.Engine, shs *sHTTPService) {
@@ -127,7 +128,18 @@ func (s *SchedulerHTTPService) registerRoutes(r *gin.Engine, shs *sHTTPService) 
 	r.POST("/scheduler/stop", shs.stop)
 }
 
+// New method to add static paths
+func (s *SchedulerHTTPService) AddStaticPath(urlPath, localPath string) {
+	if s.StaticPaths == nil {
+		s.StaticPaths = make(map[string]string)
+	}
+	s.StaticPaths[urlPath] = localPath
+}
 
+// New method to add extra routes
+func (s *SchedulerHTTPService) AddRoute(routeFunc func(r *gin.Engine)) {
+	s.ExtraRoutes = append(s.ExtraRoutes, routeFunc)
+}
 
 func (s *SchedulerHTTPService) Start() error {
 	if s.Address == "" {
