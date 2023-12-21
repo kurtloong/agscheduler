@@ -3,7 +3,12 @@ package agscheduler
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"log/slog"
+	"net/http"
+	"net/smtp"
+	"net/url"
 	"reflect"
 	"runtime/debug"
 	"slices"
@@ -24,6 +29,23 @@ var GetClusterNode = (*Scheduler).getClusterNode
 
 var mutexS sync.Mutex
 
+type EmailConfig struct {
+	SMTPServer string
+	Port       int
+	Username   string
+	Password   string
+	Sender     string
+	Recipients []string
+}
+
+type HTTPCallbackConfig struct {
+	URL     string
+	Method  string // "GET", "POST", etc.
+	Headers map[string]string
+	Params  map[string]string // Used for query parameters or form values
+
+}
+
 // In standalone mode, the scheduler only needs to run jobs on a regular basis.
 // In cluster mode, the scheduler also needs to be responsible for allocating jobs to cluster nodes.
 type Scheduler struct {
@@ -38,6 +60,9 @@ type Scheduler struct {
 
 	// Used in cluster mode, bind to each other and the cluster node.
 	clusterNode *ClusterNode
+
+	EmailConfig        *EmailConfig
+	HTTPCallbackConfig *HTTPCallbackConfig
 }
 
 // Bind the store
@@ -223,6 +248,8 @@ func (s *Scheduler) _runJob(j Job) {
 			if err != nil {
 				e := &JobTimeoutError{FullName: j.FullName(), Timeout: j.Timeout, Err: err}
 				slog.Error(e.Error())
+				s.sendEmail(j, e.Error())    // 发送邮件
+				s.httpCallback(j, e.Error()) // HTTP 回调
 				return
 			}
 
@@ -234,12 +261,21 @@ func (s *Scheduler) _runJob(j Job) {
 				defer close(ch)
 				defer func() {
 					if err := recover(); err != nil {
-						slog.Error(fmt.Sprintf("Job `%s` run error: %s\n", j.FullName(), err))
+						errMsg := fmt.Sprintf("Job `%s` run error: %s\n", j.FullName(), err)
+						slog.Error(errMsg)
 						slog.Debug(fmt.Sprintf("%s\n", string(debug.Stack())))
+						s.sendEmail(j, errMsg)    // 发送邮件
+						s.httpCallback(j, errMsg) // HTTP 回调
 					}
 				}()
 
-				f.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(j)})
+				results := f.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(j)})
+				if len(results) > 0 && !results[0].IsNil() {
+					err := results[0].Interface().(error)
+					slog.Error(err.Error())
+					s.sendEmail(j, err.Error())    // 发送邮件
+					s.httpCallback(j, err.Error()) // HTTP 回调
+				}
 			}()
 
 			select {
@@ -247,6 +283,8 @@ func (s *Scheduler) _runJob(j Job) {
 				return
 			case <-ctx.Done():
 				slog.Warn(fmt.Sprintf("Job `%s` run timeout\n", j.FullName()))
+				s.sendEmail(j, "Job run timeout")    // 发送邮件
+				s.httpCallback(j, "Job run timeout") // HTTP 回调
 			}
 		}()
 	}
@@ -454,4 +492,73 @@ func (s *Scheduler) getNextWakeupInterval() time.Duration {
 
 func (s *Scheduler) wakeup() {
 	s.timer.Reset(0)
+}
+
+func (s *Scheduler) sendEmail(j Job, errMsg string) {
+	if s.EmailConfig == nil {
+		return // 如果没有设置邮件配置，则返回
+	}
+
+	// 设置邮件内容
+	subject := "Job Error Notification"
+	body := fmt.Sprintf("An error occurred in job '%s': %s", j.FullName(), errMsg)
+	msg := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\n\n%s",
+		s.EmailConfig.Sender,
+		strings.Join(s.EmailConfig.Recipients, ","),
+		subject,
+		body,
+	)
+
+	// SMTP 服务器地址
+	addr := fmt.Sprintf("%s:%d", s.EmailConfig.SMTPServer, s.EmailConfig.Port)
+
+	// 认证信息
+	auth := smtp.PlainAuth("", s.EmailConfig.Username, s.EmailConfig.Password, s.EmailConfig.SMTPServer)
+
+	// 发送邮件
+	err := smtp.SendMail(addr, auth, s.EmailConfig.Sender, s.EmailConfig.Recipients, []byte(msg))
+	if err != nil {
+		log.Println("Failed to send email:", err)
+	}
+}
+
+func (s *Scheduler) httpCallback(j Job, errMsg string) {
+	if s.HTTPCallbackConfig == nil {
+		return // 如果没有设置HTTP回调配置，则返回
+	}
+
+	// 创建请求数据
+	data := url.Values{}
+	for key, value := range s.HTTPCallbackConfig.Params {
+		data.Set(key, value)
+	}
+
+	// 创建请求
+	var req *http.Request
+	var err error
+	if s.HTTPCallbackConfig.Method == "POST" {
+		req, err = http.NewRequest("POST", s.HTTPCallbackConfig.URL, strings.NewReader(data.Encode()))
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	} else {
+		req, err = http.NewRequest("GET", s.HTTPCallbackConfig.URL, nil)
+		req.URL.RawQuery = data.Encode()
+	}
+
+	// 添加自定义头
+	for key, value := range s.HTTPCallbackConfig.Headers {
+		req.Header.Add(key, value)
+	}
+
+	// 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Failed to send HTTP callback:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// 你可能想要处理响应
+	body, _ := ioutil.ReadAll(resp.Body)
+	slog.Info(fmt.Sprintf("HTTP callback response: %s\n", string(body)))
 }
