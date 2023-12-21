@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/kwkwc/agscheduler"
+	"github.com/kurtloong/agscheduler"
 )
 
 const TABLE_NAME = "jobs"

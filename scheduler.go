@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/kwkwc/agscheduler/services/proto"
+	pb "github.com/kurtloong/agscheduler/services/proto"
 )
 
 var GetStore = (*Scheduler).getStore

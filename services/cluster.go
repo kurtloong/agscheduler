@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/kwkwc/agscheduler"
+	"github.com/kurtloong/agscheduler"
 )
 
 type ClusterService struct {

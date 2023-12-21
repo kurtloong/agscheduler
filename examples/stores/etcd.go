@@ -10,8 +10,8 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 
-	"github.com/kwkwc/agscheduler"
-	"github.com/kwkwc/agscheduler/stores"
+	"github.com/kurtloong/agscheduler"
+	"github.com/kurtloong/agscheduler/stores"
 )
 
 func main() {

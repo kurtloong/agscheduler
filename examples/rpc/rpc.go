@@ -13,11 +13,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/kwkwc/agscheduler"
-	"github.com/kwkwc/agscheduler/examples"
-	"github.com/kwkwc/agscheduler/services"
-	pb "github.com/kwkwc/agscheduler/services/proto"
-	"github.com/kwkwc/agscheduler/stores"
+	"github.com/kurtloong/agscheduler"
+	"github.com/kurtloong/agscheduler/examples"
+	"github.com/kurtloong/agscheduler/services"
+	"github.com/kurtloong/agscheduler/stores"
+	pb "github.com/kurtloong/agscheduler/services/proto"
 )
 
 var ctx = context.Background()
@@ -28,7 +28,7 @@ func runExampleRPC(c pb.SchedulerClient) {
 		Type:     agscheduler.TYPE_INTERVAL,
 		Interval: "2s",
 		Timezone: "UTC",
-		FuncName: "github.com/kwkwc/agscheduler/examples.PrintMsg",
+		FuncName: "github.com/kurtloong/agscheduler/examples.PrintMsg",
 		Args:     map[string]any{"arg1": "1", "arg2": "2", "arg3": "3"},
 	}
 	pbJob1, _ := c.AddJob(ctx, agscheduler.JobToPbJobPtr(job1))
@@ -40,7 +40,7 @@ func runExampleRPC(c pb.SchedulerClient) {
 		Type:     agscheduler.TYPE_CRON,
 		CronExpr: "*/1 * * * *",
 		Timezone: "Asia/Shanghai",
-		FuncName: "github.com/kwkwc/agscheduler/examples.PrintMsg",
+		FuncName: "github.com/kurtloong/agscheduler/examples.PrintMsg",
 		Args:     map[string]any{"arg4": "4", "arg5": "5", "arg6": "6", "arg7": "7"},
 	}
 	pbJob2, _ := c.AddJob(ctx, agscheduler.JobToPbJobPtr(job2))
@@ -54,7 +54,7 @@ func runExampleRPC(c pb.SchedulerClient) {
 		Type:     agscheduler.TYPE_DATETIME,
 		StartAt:  "2023-09-22 07:30:08",
 		Timezone: "America/New_York",
-		FuncName: "github.com/kwkwc/agscheduler/examples.PrintMsg",
+		FuncName: "github.com/kurtloong/agscheduler/examples.PrintMsg",
 		Args:     map[string]any{"arg8": "8", "arg9": "9"},
 	}
 	pbJob3, _ := c.AddJob(ctx, agscheduler.JobToPbJobPtr(job3))

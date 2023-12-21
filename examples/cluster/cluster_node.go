@@ -12,10 +12,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/kwkwc/agscheduler"
-	"github.com/kwkwc/agscheduler/examples"
-	"github.com/kwkwc/agscheduler/services"
-	"github.com/kwkwc/agscheduler/stores"
+	"github.com/kurtloong/agscheduler"
+	"github.com/kurtloong/agscheduler/examples"
+	"github.com/kurtloong/agscheduler/services"
+	"github.com/kurtloong/agscheduler/stores"
 )
 
 var mainEndpoint = flag.String("me", "127.0.0.1:36380", "Cluster Main Node endpoint")

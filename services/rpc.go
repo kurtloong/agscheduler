@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/kwkwc/agscheduler"
-	pb "github.com/kwkwc/agscheduler/services/proto"
+	"github.com/kurtloong/agscheduler"
+	pb "github.com/kurtloong/agscheduler/services/proto"
 )
 
 type sRPCService struct {

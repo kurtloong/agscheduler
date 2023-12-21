@@ -10,9 +10,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/kwkwc/agscheduler"
-	pb "github.com/kwkwc/agscheduler/services/proto"
-	"github.com/kwkwc/agscheduler/stores"
+	"github.com/kurtloong/agscheduler"
+	pb "github.com/kurtloong/agscheduler/services/proto"
+	"github.com/kurtloong/agscheduler/stores"
 )
 
 var ctx = context.Background()
@@ -27,7 +27,7 @@ func testAGSchedulerRPC(t *testing.T, c pb.SchedulerClient) {
 		Name:     "Job",
 		Type:     agscheduler.TYPE_INTERVAL,
 		Interval: "1s",
-		FuncName: "github.com/kwkwc/agscheduler/services.dryRunRPC",
+		FuncName: "github.com/kurtloong/agscheduler/services.dryRunRPC",
 		Args:     map[string]any{"arg1": "1", "arg2": "2", "arg3": "3"},
 	}
 	assert.Empty(t, j.Status)

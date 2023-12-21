@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kwkwc/agscheduler"
+	"github.com/kurtloong/agscheduler"
 )
 
 func TestMongoDBStore(t *testing.T) {

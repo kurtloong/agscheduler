@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/kwkwc/agscheduler"
-	"github.com/kwkwc/agscheduler/examples"
-	"github.com/kwkwc/agscheduler/services"
-	"github.com/kwkwc/agscheduler/stores"
+	"github.com/kurtloong/agscheduler"
+	"github.com/kurtloong/agscheduler/services"
+	"github.com/kurtloong/agscheduler/stores"
+	"github.com/kurtloong/agscheduler/examples"
 )
 
 func main() {

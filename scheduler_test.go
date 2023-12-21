@@ -8,8 +8,8 @@ import (
 	"github.com/gorhill/cronexpr"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kwkwc/agscheduler"
-	"github.com/kwkwc/agscheduler/stores"
+	"github.com/kurtloong/agscheduler"
+	"github.com/kurtloong/agscheduler/stores"
 )
 
 func dryRunScheduler(ctx context.Context, j agscheduler.Job) {}

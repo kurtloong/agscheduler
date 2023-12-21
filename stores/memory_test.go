@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kwkwc/agscheduler"
+	"github.com/kurtloong/agscheduler"
 )
 
 func TestMemoryStore(t *testing.T) {

@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/kwkwc/agscheduler"
-	pb "github.com/kwkwc/agscheduler/services/proto"
+	"github.com/kurtloong/agscheduler"
+	pb "github.com/kurtloong/agscheduler/services/proto"
 )
 
 var ctx = context.Background()
@@ -23,7 +23,7 @@ func runExampleRPC(c pb.SchedulerClient) {
 		Type:     agscheduler.TYPE_INTERVAL,
 		Interval: "2s",
 		Timezone: "UTC",
-		FuncName: "github.com/kwkwc/agscheduler/examples.PrintMsg",
+		FuncName: "github.com/kurtloong/agscheduler/examples.PrintMsg",
 		Args:     map[string]any{"arg1": "1", "arg2": "2", "arg3": "3"},
 	}
 	pbJob1, _ := c.AddJob(ctx, agscheduler.JobToPbJobPtr(job1))

@@ -9,7 +9,7 @@ import (
 	"net/rpc"
 	"time"
 
-	"github.com/kwkwc/agscheduler"
+	"github.com/kurtloong/agscheduler"
 )
 
 type CRPCService struct {
