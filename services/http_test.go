@@ -163,10 +163,6 @@ func TestHTTPService(t *testing.T) {
 
 	scheduler := &agscheduler.Scheduler{}
 	scheduler.SetStore(store)
-	scheduler.HTTPCallbackConfig = &agscheduler.HTTPCallbackConfig{
-		URL:    "http://baidu.com",
-		Method: http.MethodGet,
-	}
 
 	shservice := SchedulerHTTPService{
 		Scheduler: scheduler,

@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/smtp"
-	"net/url"
 	"reflect"
 	"runtime/debug"
 	"slices"
@@ -41,11 +40,9 @@ type EmailConfig struct {
 }
 
 type HTTPCallbackConfig struct {
-	URL     string
-	Method  string // "GET", "POST", etc.
-	Headers map[string]string
-	Params  map[string]string // Used for query parameters or form values
-
+	URL         string   // 企业微信机器人的URL
+	MessageType string   // 消息类型，例如"text"
+	MentionList []string // 要@的人的列表，存储企业微信ID
 }
 
 // In standalone mode, the scheduler only needs to run jobs on a regular basis.
@@ -529,33 +526,29 @@ func (s *Scheduler) httpCallback(j Job, errMsg string) {
 		return // 如果没有设置HTTP回调配置，则返回
 	}
 
-	var req *http.Request
-	var err error
-
-	// 根据配置选择发送JSON或表单数据
-	if s.HTTPCallbackConfig.Method == "POST" && s.HTTPCallbackConfig.Headers["Content-Type"] == "application/json" {
-		// 发送JSON数据
-		jsonBody, err := json.Marshal(s.HTTPCallbackConfig.Params)
-		if err != nil {
-			log.Println("Failed to marshal JSON:", err)
-			return
-		}
-		req, err = http.NewRequest("POST", s.HTTPCallbackConfig.URL, bytes.NewBuffer(jsonBody))
-		req.Header.Add("Content-Type", "application/json")
-	} else {
-		// 发送表单数据
-		data := url.Values{}
-		for key, value := range s.HTTPCallbackConfig.Params {
-			data.Set(key, value)
-		}
-		req, err = http.NewRequest(s.HTTPCallbackConfig.Method, s.HTTPCallbackConfig.URL, strings.NewReader(data.Encode()))
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	// 构造企业微信机器人的消息体
+	message := map[string]interface{}{
+		"msgtype": s.HTTPCallbackConfig.MessageType,
+		s.HTTPCallbackConfig.MessageType: map[string]interface{}{
+			"content":        errMsg, // 这里你可能需要修改以发送具体的消息内容
+			"mentioned_list": s.HTTPCallbackConfig.MentionList,
+		},
 	}
 
-	// 添加自定义头
-	for key, value := range s.HTTPCallbackConfig.Headers {
-		req.Header.Add(key, value)
+	// 序列化消息体为JSON
+	jsonBody, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Failed to marshal JSON:", err)
+		return
 	}
+
+	// 创建POST请求
+	req, err := http.NewRequest("POST", s.HTTPCallbackConfig.URL, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		log.Println("Failed to create request:", err)
+		return
+	}
+	req.Header.Add("Content-Type", "application/json")
 
 	// 发送请求
 	client := &http.Client{}
@@ -566,7 +559,7 @@ func (s *Scheduler) httpCallback(j Job, errMsg string) {
 	}
 	defer resp.Body.Close()
 
-	// 你可能想要处理响应
+	// 处理响应
 	body, _ := ioutil.ReadAll(resp.Body)
 	slog.Info(fmt.Sprintf("HTTP callback response: %s\n", string(body)))
 }
